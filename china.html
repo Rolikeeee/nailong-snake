@@ -245,7 +245,7 @@
     </div>
   </div>
 
-  <p class="legend">↑↓←→ 或 WASD 开溜 · 空格 暂停/继续 · 回车 重来</p>
+  <p class="legend">点鼠标 / 点屏幕空白处 = 顺时针转向 · 空格 暂停/开始 · 回车 重开</p>
 
   <div class="dpad" aria-label="方向按钮">
     <button class="up"    data-dir="up"    aria-label="向上">↑</button>
@@ -254,7 +254,7 @@
     <button class="right" data-dir="right" aria-label="向右">→</button>
   </div>
 
-  <p class="foot">奶龙贪吃蛇 · 手机也能玩</p>
+  <p class="foot">奶龙贪吃蛇 · 国内加速版</p>
 </main>
 
 <script>
@@ -324,7 +324,7 @@ function boot(){
 // 角度差归一化：转头动画永远走最短的弧线
 function shortestAngle(d){ return Math.atan2(Math.sin(d), Math.cos(d)); }
 
-// ----- 2.5 背景音乐：奶龙贪吃蛇（国内版：音乐从腾讯 COS 广州节点加载，国内快） -----
+// ----- 2.5 背景音乐：奶龙贪吃蛇（和本文件放同一文件夹） -----
 const bgm = new Audio('https://nailong-snake-1470457347.cos.ap-guangzhou.myqcloud.com/%E5%A5%B6%E9%BE%99%E8%B4%AA%E5%90%83%E8%9B%87.m4a');
 bgm.loop = true;          // 循环播放
 bgm.volume = 0.35;        // 音乐音量，别盖过音效
@@ -448,11 +448,6 @@ function tick(){
 }
 
 // ----- 5. 输入处理 -----
-const keyToDir = {
-  ArrowUp:'up', ArrowDown:'down', ArrowLeft:'left', ArrowRight:'right',
-  w:'up', W:'up', s:'down', S:'down', a:'left', A:'left', d:'right', D:'right',
-};
-
 function turn(name){
   const d = DIRS[name];
   if (!d) return;
@@ -461,34 +456,38 @@ function turn(name){
   nextDir = d;
 }
 
+// 点一下：顺时针转 90°（右→下→左→上→右）
+function turnClockwise(){
+  const a = Math.atan2(nextDir.y, nextDir.x) + Math.PI / 2;
+  const d = { x: Math.round(Math.cos(a)), y: Math.round(Math.sin(a)) };
+  if (d.x === -dir.x && d.y === -dir.y) return; // 不允许 180° 掉头，忽略这次点击
+  nextDir = d;
+}
+
 window.addEventListener('keydown', e => {
   if (e.isComposing) return; // 中文输入法打字时不要误触
   const k = e.key;
-  if (k.startsWith('Arrow') || k === ' ') e.preventDefault(); // 防止页面滚动
+  if (k === ' ') e.preventDefault(); // 防止页面滚动
 
   if (k === 'Enter'){ resetAndStart(); return; }
   if (k === ' '){
     if (state === 'running')      setState('paused');
     else if (state === 'paused')  setState('running');
     else                          resetAndStart(); // ready / over
-    return;
-  }
-  const name = keyToDir[k];
-  if (name){
-    if (state === 'ready' || state === 'over') resetAndStart();
-    turn(name);
   }
 });
 
-// 点击棋盘（或覆盖其上的提示层）：开始 / 重开 / 暂停时继续
+// 点击棋盘（或覆盖其上的提示层）：
+// 游戏中 = 顺时针转向；待开始/结束 = 开始；暂停 = 继续
 function startByClick(){
+  if (state === 'running'){ turnClockwise(); return; }
   if (state === 'ready' || state === 'over') resetAndStart();
   else if (state === 'paused') setState('running');
 }
 canvas.addEventListener('click', startByClick);
 overlay.addEventListener('click', startByClick);
 
-// 手机上滑动屏幕也能控制方向
+// 手机上：滑动屏幕按滑动方向转向；点一下空白处 = 顺时针转向
 let touchStart = null;
 canvas.addEventListener('touchstart', e => {
   touchStart = { x: e.touches[0].clientX, y: e.touches[0].clientY };
@@ -499,10 +498,11 @@ canvas.addEventListener('touchend', e => {
   const dx = t.clientX - touchStart.x;
   const dy = t.clientY - touchStart.y;
   touchStart = null;
-  if (Math.max(Math.abs(dx), Math.abs(dy)) < 24) return; // 滑动太短不算
+  if (Math.max(Math.abs(dx), Math.abs(dy)) < 24) return; // 太短算点击，交给 click 处理
+  e.preventDefault(); // 阻止这次滑动又触发一次点击
   if (state === 'ready' || state === 'over') resetAndStart();
   turn(Math.abs(dx) > Math.abs(dy) ? (dx > 0 ? 'right' : 'left') : (dy > 0 ? 'down' : 'up'));
-}, { passive: true });
+}, { passive: false });
 
 // 手机上的方向按钮
 document.querySelectorAll('.dpad button').forEach(btn => {
