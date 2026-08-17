@@ -185,28 +185,6 @@
   .legend{ margin:24px 0 0; font-size:13px; color:var(--ink-soft); letter-spacing:.06em; text-align:center; }
   .foot{ margin-top:30px; font-size:12px; color:var(--ink-soft); letter-spacing:.1em; text-align:center; }
 
-  /* ============ 手机/平板的方向键 ============ */
-  .dpad{ display:none; }
-  @media (pointer:coarse){
-    .dpad{
-      display:grid;
-      grid-template-areas:". u ." "l d r";
-      gap:10px; margin-top:24px;
-    }
-    .dpad button{
-      width:58px; height:58px;
-      background:var(--white); border:3px solid var(--ink); border-radius:14px;
-      color:var(--ink); font-size:20px; font-family:inherit; font-weight:700;
-      box-shadow:3px 3px 0 var(--ink);
-      cursor:pointer; -webkit-tap-highlight-color:transparent;
-    }
-    .dpad button:active{ transform:translate(2px,2px); box-shadow:1px 1px 0 var(--ink); }
-    .dpad .up{ grid-area:u; background:var(--yellow) }
-    .dpad .down{ grid-area:d; background:var(--pink); color:#fff }
-    .dpad .left{ grid-area:l; background:var(--teal) }
-    .dpad .right{ grid-area:r; background:var(--purple); color:#fff }
-  }
-
   @media (prefers-reduced-motion:reduce){
     .overlay{ animation:none; }
     .tile, .sticker{ animation:none; }
@@ -246,13 +224,6 @@
   </div>
 
   <p class="legend">点鼠标 / 点屏幕空白处 = 顺时针转向 · 空格 暂停/开始 · 回车 重开</p>
-
-  <div class="dpad" aria-label="方向按钮">
-    <button class="up"    data-dir="up"    aria-label="向上">↑</button>
-    <button class="left"  data-dir="left"  aria-label="向左">←</button>
-    <button class="down"  data-dir="down"  aria-label="向下">↓</button>
-    <button class="right" data-dir="right" aria-label="向右">→</button>
-  </div>
 
   <p class="foot">奶龙贪吃蛇 · CDN 版</p>
 </main>
@@ -503,14 +474,6 @@ canvas.addEventListener('touchend', e => {
   if (state === 'ready' || state === 'over') resetAndStart();
   turn(Math.abs(dx) > Math.abs(dy) ? (dx > 0 ? 'right' : 'left') : (dy > 0 ? 'down' : 'up'));
 }, { passive: false });
-
-// 手机上的方向按钮
-document.querySelectorAll('.dpad button').forEach(btn => {
-  btn.addEventListener('click', () => {
-    if (state === 'ready' || state === 'over') resetAndStart();
-    turn(btn.dataset.dir);
-  });
-});
 
 // 切走页面时自动暂停，回来按空格继续
 window.addEventListener('blur', () => { if (state === 'running') setState('paused'); });
