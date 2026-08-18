@@ -182,8 +182,45 @@
   .restart[hidden]{ display:none; }
 
   /* ============ 说明文字 ============ */
-  .legend{ margin:24px 0 0; font-size:13px; color:var(--ink-soft); letter-spacing:.06em; text-align:center; }
+  .side{ display:contents; } /* 竖屏/电脑时侧栏内容直接排在页面里 */
+  .legend{ margin:24px 0 0; font-size:13px; color:var(--ink-soft); letter-spacing:.06em; text-align:center; line-height:1.7; }
   .foot{ margin-top:30px; font-size:12px; color:var(--ink-soft); letter-spacing:.1em; text-align:center; }
+  .rotate-hint{ display:none; }
+
+  /* ============ 手机竖屏：旋转提示 ============ */
+  @media (pointer:coarse){
+    .rotate-hint{
+      display:block; margin:18px 0 0;
+      padding:8px 16px;
+      background:var(--yellow); border:3px solid var(--ink); border-radius:999px;
+      font-size:13px; font-weight:700;
+      box-shadow:3px 3px 0 var(--ink);
+    }
+  }
+
+  /* ============ 手机横屏布局：棋盘在左，信息在右 ============ */
+  @media (pointer:coarse) and (orientation:landscape){
+    body{ align-items:center; }
+    .page{
+      flex-direction:row; align-items:center; justify-content:center;
+      gap:18px; width:min(98vw,1024px); padding:10px 12px;
+    }
+    .side{
+      display:flex; flex-direction:column; align-items:center;
+      gap:12px; width:min(30vw,270px);
+    }
+    .masthead{ margin-bottom:0; }
+    .tile{ font-size:24px; padding:7px 9px; }
+    .subtitle{ display:none; }
+    .score-row{ width:100%; max-width:270px; flex-direction:column; gap:10px; margin-bottom:0; }
+    .sound-btn{ margin-left:0; }
+    .board-wrap{ width:auto; }
+    .frame{ width:min(62vw, calc(94vh - 30px)); padding:10px; }
+    .legend{ margin:0; font-size:12px; }
+    .foot{ display:none; }
+    .rotate-hint{ display:none; }
+    .sticker{ display:none; }
+  }
 
   @media (prefers-reduced-motion:reduce){
     .overlay{ animation:none; }
@@ -198,18 +235,20 @@
   <span class="sticker s2" aria-hidden="true">咻~</span>
   <span class="sticker s3" aria-hidden="true">豆!</span>
 
-  <header class="masthead">
-    <h1 class="title-tiles">
-      <span class="tile t1">奶</span><span class="tile t2">龙</span><span class="tile t3">贪</span><span class="tile t4">吃</span><span class="tile t5">蛇</span>
-    </h1>
-    <p class="subtitle">搞怪版 · 别把蛇绕晕了</p>
-  </header>
+  <aside class="side">
+    <header class="masthead">
+      <h1 class="title-tiles">
+        <span class="tile t1">奶</span><span class="tile t2">龙</span><span class="tile t3">贪</span><span class="tile t4">吃</span><span class="tile t5">蛇</span>
+      </h1>
+      <p class="subtitle">搞怪版 · 别把蛇绕晕了</p>
+    </header>
 
-  <div class="score-row">
-    <div class="score-box"><span class="label">吃掉</span><span class="num" id="score">0</span></div>
-    <div class="score-box"><span class="label">最高纪录</span><span class="num" id="best">0</span></div>
-    <button class="sound-btn" id="soundBtn" aria-pressed="true">声音 开</button>
-  </div>
+    <div class="score-row">
+      <div class="score-box"><span class="label">吃掉</span><span class="num" id="score">0</span></div>
+      <div class="score-box"><span class="label">最高纪录</span><span class="num" id="best">0</span></div>
+      <button class="sound-btn" id="soundBtn" aria-pressed="true">声音 开</button>
+    </div>
+  </aside>
 
   <div class="board-wrap">
     <div class="frame">
@@ -223,7 +262,9 @@
     </div>
   </div>
 
-  <p class="legend">点鼠标 / 点屏幕空白处 = 顺时针转向 · 空格 暂停/开始 · 回车 重开</p>
+  <p class="legend">电脑：WASD / 方向键移动 · 空格 暂停 · 回车 重开<br>手机：按住棋盘，滑动摇杆移动</p>
+
+  <p class="rotate-hint">📱 旋转手机，横屏更好玩</p>
 
   <p class="foot">奶龙贪吃蛇 · 国内加速版</p>
 </main>
@@ -425,6 +466,12 @@ function tick(){
 }
 
 // ----- 5. 输入处理 -----
+// 电脑键盘：WASD + 方向键
+const keyToDir = {
+  ArrowUp:'up', ArrowDown:'down', ArrowLeft:'left', ArrowRight:'right',
+  w:'up', W:'up', s:'down', S:'down', a:'left', A:'left', d:'right', D:'right',
+};
+
 function turn(name){
   const d = DIRS[name];
   if (!d) return;
@@ -433,53 +480,113 @@ function turn(name){
   nextDir = d;
 }
 
-// 点一下：顺时针转 90°（右→下→左→上→右）
-function turnClockwise(){
-  const a = Math.atan2(nextDir.y, nextDir.x) + Math.PI / 2;
-  const d = { x: Math.round(Math.cos(a)), y: Math.round(Math.sin(a)) };
-  if (d.x === -dir.x && d.y === -dir.y) return; // 不允许 180° 掉头，忽略这次点击
-  nextDir = d;
-}
-
 window.addEventListener('keydown', e => {
   if (e.isComposing) return; // 中文输入法打字时不要误触
   const k = e.key;
-  if (k === ' ') e.preventDefault(); // 防止页面滚动
+  if (k.startsWith('Arrow') || k === ' ') e.preventDefault(); // 防止页面滚动
 
   if (k === 'Enter'){ resetAndStart(); return; }
   if (k === ' '){
     if (state === 'running')      setState('paused');
     else if (state === 'paused')  setState('running');
     else                          resetAndStart(); // ready / over
+    return;
+  }
+  const name = keyToDir[k];
+  if (name){
+    if (state === 'ready' || state === 'over') resetAndStart();
+    turn(name);
   }
 });
 
-// 点击棋盘（或覆盖其上的提示层）：
-// 游戏中 = 顺时针转向；待开始/结束 = 开始；暂停 = 继续
+// 点击棋盘（或覆盖其上的提示层）：开始 / 重开 / 暂停继续（不再转向）
 function startByClick(){
-  if (state === 'running'){ turnClockwise(); return; }
   if (state === 'ready' || state === 'over') resetAndStart();
   else if (state === 'paused') setState('running');
 }
 canvas.addEventListener('click', startByClick);
 overlay.addEventListener('click', startByClick);
 
-// 手机上：滑动屏幕按滑动方向转向；点一下空白处 = 顺时针转向
-let touchStart = null;
+// ===== 手机摇杆：官方《贪吃蛇大作战》活动摇杆机制 =====
+const JOY_RADIUS = 60;                       // 摇杆可视半径（屏幕像素）
+const JOY_DEADZONE = JOY_RADIUS * 0.12;      // 死区：位移 < 7.2px 不转向，防手抖
+const JOY_HYSTERESIS = 7.5 * Math.PI / 180;  // 对角 ±7.5° 迟滞，防来回抖
+const JOY_NAMES = ['right', 'down', 'left', 'up'];
+
+let joy = null;          // { ox, oy, kx, ky } 底座原点 + 手指位置（屏幕像素）
+let joyLastDir = null;   // 上一次映射出的方向，用于迟滞
+let joyTouchId = null;   // 正在控制摇杆的手指 id
+
+// 底座跟随（官方同款）：手指拖出圈后，底座跟着手指平移，永远不会失控
+function joyFollow(){
+  const dx = joy.kx - joy.ox, dy = joy.ky - joy.oy;
+  const dist = Math.hypot(dx, dy);
+  if (dist <= JOY_RADIUS) return;
+  const over = dist - JOY_RADIUS;
+  joy.ox += dx / dist * over;
+  joy.oy += dy / dist * over;
+}
+
+// 摇杆角度 → 四方向（死区 + 对角迟滞）
+function joyDir(){
+  const dx = joy.kx - joy.ox, dy = joy.ky - joy.oy;
+  const dist = Math.hypot(dx, dy);
+  if (dist < JOY_DEADZONE) return null; // 死区内不转向
+  const ang = (Math.atan2(dy, dx) + 2 * Math.PI) % (2 * Math.PI); // 右=0 下=π/2
+
+  if (joyLastDir){
+    // 还在上一个扇区的迟滞带内 → 保持原方向，不来回抖
+    const oldIdx = JOY_NAMES.indexOf(joyLastDir);
+    let dOld = ang - oldIdx * Math.PI / 2;
+    dOld = ((dOld + Math.PI) % (2 * Math.PI) + 2 * Math.PI) % (2 * Math.PI) - Math.PI;
+    if (Math.abs(dOld) < Math.PI / 4 + JOY_HYSTERESIS) return joyLastDir;
+  }
+  joyLastDir = JOY_NAMES[Math.floor((ang + Math.PI / 4) / (Math.PI / 2)) % 4];
+  return joyLastDir;
+}
+
+function joyStart(x, y){
+  joy = { ox: x, oy: y, kx: x, ky: y };
+  joyLastDir = null;
+}
+function joyMove(x, y){
+  if (!joy) return;
+  joy.kx = x; joy.ky = y;
+  joyFollow();
+  const name = joyDir();
+  if (name) turn(name);
+}
+function joyEnd(){
+  joy = null;
+  joyLastDir = null;
+  joyTouchId = null;
+}
+
 canvas.addEventListener('touchstart', e => {
-  touchStart = { x: e.touches[0].clientX, y: e.touches[0].clientY };
-}, { passive: true });
-canvas.addEventListener('touchend', e => {
-  if (!touchStart) return;
-  const t = e.changedTouches[0];
-  const dx = t.clientX - touchStart.x;
-  const dy = t.clientY - touchStart.y;
-  touchStart = null;
-  if (Math.max(Math.abs(dx), Math.abs(dy)) < 24) return; // 太短算点击，交给 click 处理
-  e.preventDefault(); // 阻止这次滑动又触发一次点击
-  if (state === 'ready' || state === 'over') resetAndStart();
-  turn(Math.abs(dx) > Math.abs(dy) ? (dx > 0 ? 'right' : 'left') : (dy > 0 ? 'down' : 'up'));
+  if (state !== 'running') return;      // 其他状态下触摸交给遮罩层
+  if (joyTouchId !== null) return;      // 已经有手指在控制
+  const t = e.touches[0];
+  joyTouchId = t.identifier;
+  joyStart(t.clientX, t.clientY);
+  e.preventDefault();                    // 不触发点击
 }, { passive: false });
+
+canvas.addEventListener('touchmove', e => {
+  if (joyTouchId === null) return;
+  const t = Array.from(e.touches).find(t => t.identifier === joyTouchId);
+  if (!t) return;
+  joyMove(t.clientX, t.clientY);
+  e.preventDefault();
+}, { passive: false });
+
+canvas.addEventListener('touchend', e => {
+  const gone = Array.from(e.changedTouches).find(t => t.identifier === joyTouchId);
+  if (!gone) return;
+  joyEnd();
+  e.preventDefault();                    // 防止拖完又触发一次点击
+}, { passive: false });
+
+canvas.addEventListener('touchcancel', joyEnd);
 
 // 切走页面时自动暂停，回来按空格继续
 window.addEventListener('blur', () => { if (state === 'running') setState('paused'); });
@@ -523,6 +630,32 @@ function draw(t){
 
   drawFood();
   drawSnake(t);
+  drawJoystick();
+}
+
+// 摇杆可视化：半透明底座 + 黄色摇杆头（限制在半径内）
+function drawJoystick(){
+  if (!joy) return;
+  const rect = canvas.getBoundingClientRect();
+  const s = SIZE / rect.width; // 屏幕像素 → 画布逻辑坐标
+  const bx = (joy.ox - rect.left) * s, by = (joy.oy - rect.top) * s;
+  const kx = (joy.kx - rect.left) * s, ky = (joy.ky - rect.top) * s;
+  const R = JOY_RADIUS * s;
+
+  // 底座
+  ctx.beginPath(); ctx.arc(bx, by, R, 0, Math.PI * 2);
+  ctx.fillStyle = 'rgba(43,43,51,0.10)';
+  ctx.fill();
+  ctx.lineWidth = 2; ctx.strokeStyle = 'rgba(43,43,51,0.40)'; ctx.stroke();
+
+  // 摇杆头
+  let dx = kx - bx, dy = ky - by;
+  const dist = Math.hypot(dx, dy);
+  if (dist > R){ dx = dx / dist * R; dy = dy / dist * R; }
+  ctx.beginPath(); ctx.arc(bx + dx, by + dy, R * 0.45, 0, Math.PI * 2);
+  ctx.fillStyle = 'rgba(255,210,63,0.92)';
+  ctx.fill();
+  ctx.lineWidth = 2.5; ctx.strokeStyle = '#2B2B33'; ctx.stroke();
 }
 
 function drawFood(){
