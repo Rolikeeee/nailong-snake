@@ -925,13 +925,14 @@ function sndRecord(){ // 破纪录：播放剪映素材音效
   recordSnd.play().catch(() => {});
 }
 
-// ----- 8. 排行榜（腾讯云开发 CloudBase，未配置环境时自动隐藏） -----
-const TCB_ENV = "nailong-snake-d4g1dibjn844972c5"; // 云开发环境 ID
+// ----- 8. 排行榜（CloudBase SQL 数据库 · PostgREST 接口） -----
+const TCB_BASE = 'https://nailong-snake-d4g1dibjn844972c5.api.tcloudbasegateway.com/v1/rdb/rest';
+const TCB_KEY = "eyJhbGciOiJSUzI1NiIsImtpZCI6ImM5NTkyNzAwLTdmMGYtNGFmMS05ZTJmLTdiMjg0NjczNDcyZSJ9.eyJpc3MiOiJodHRwczovL25haWxvbmctc25ha2UtZDRnMWRpYmpuODQ0OTcyYzUuYXAtc2hhbmdoYWkudGNiLWFwaS50ZW5jZW50Y2xvdWRhcGkuY29tIiwic3ViIjoiYW5vbiIsImF1ZCI6Im5haWxvbmctc25ha2UtZDRnMWRpYmpuODQ0OTcyYzUiLCJleHAiOjQwOTA4MjM2NzIsImlhdCI6MTc4NzE0MDQ3Miwibm9uY2UiOiJDWlRlZzdIcVNuV29jUjB2VXQ0YjZBIiwiYXRfaGFzaCI6IkNaVGVnN0hxU25Xb2NSMHZVdDRiNkEiLCJuYW1lIjoiQW5vbnltb3VzIiwic2NvcGUiOiJhbm9ueW1vdXMiLCJwcm9qZWN0X2lkIjoibmFpbG9uZy1zbmFrZS1kNGcxZGliam44NDQ5NzJjNSIsIm1ldGEiOnsicGxhdGZvcm0iOiJQdWJsaXNoYWJsZUtleSJ9LCJyb2xlIjoiYW5vbiIsImlzX2Fub255bW91cyI6dHJ1ZSwiYXBwX21ldGFkYXRhIjp7InByb3ZpZGVyIjoiYW5vbnltb3VzIiwicHJvdmlkZXJzIjpbImFub255bW91cyJdfSwidXNlcl9tZXRhZGF0YSI6eyJuYW1lIjoiQW5vbnltb3VzIn0sInVzZXJfdHlwZSI6IiIsImNsaWVudF90eXBlIjoiY2xpZW50X3VzZXIiLCJpc19zeXN0ZW1fYWRtaW4iOmZhbHNlfQ.gO1TkagZmrfPNsH1wP-Z8MlinyxNQYDVPbs33It5hQbrshYl0SUsIM_w8I-cmNEWnML9V2SO4N0eHlbrJHGkgLnH2diePDDHTJXQK2CxNaOppnkEZzOPK2Q115Wdjnl4fPUgMg_J2D1uwUd-rLY0Acmi5CztEV42t4hpA56W3mjM-9zWpVoOLspiUhNi5S0dpsBV7FkQ9TiMxj-yhJaC5edJ2PzwlzLUsaqJBca7Id-Pwa071be3XUre8kJp66bO-AY5kQML7b_xQ1AcI5OWTKaNxDBneTI0geHxfIEFyaKxpJYsu1n05Z0bhdWyWvK1b4bj1p4vrh_Qd2uj5mqiIw";
 const LB_AVATARS = ['🐍','🐉','🍭','🎃','👻','🤡','🐸','🦊','🐼','🐯','🍅','🥑'];
-let lbReady = false;    // SDK 加载 + 匿名登录是否就绪
-let tcbApp = null, tcbDb = null;
+let lbReady = false;    // 接口连通测试是否通过
 let selAvatar = LB_AVATARS[0];
 let submitting = false;
+let myBest = Number(localStorage.getItem('snake.myscore.v1')) || 0; // 本机最好成绩
 
 const submitModal = document.getElementById('submitModal');
 const lbModal     = document.getElementById('lbModal');
@@ -941,7 +942,15 @@ const lbBtn       = document.getElementById('lbBtn');
 const nickInput   = document.getElementById('nickInput');
 const submitTip   = document.getElementById('submitTip');
 
-function lbDisabled(){ return !TCB_ENV || TCB_ENV.startsWith('__'); }
+function lbDisabled(){ return !TCB_KEY || TCB_KEY.startsWith('TCB_KEY_'); }
+
+// 统一的接口请求：带上匿名可发布密钥
+async function tcbApi(path, opts = {}){
+  const headers = Object.assign({ Authorization: 'Bearer ' + TCB_KEY }, opts.headers || {});
+  const res = await fetch(TCB_BASE + path, Object.assign({}, opts, { headers }));
+  if (!res.ok) throw new Error('HTTP ' + res.status);
+  return res;
+}
 
 function setLbStatus(ok){
   lbReady = ok;
@@ -952,26 +961,21 @@ function setLbStatus(ok){
   selAvatar = localStorage.getItem('snake.avatar.v1') || LB_AVATARS[0];
 }
 
-function initLeaderboard(){
-  if (lbDisabled()) return; // 没配环境 ID：静默隐藏，不影响游戏
-  const script = document.createElement('script');
-  script.src = 'https://static.cloudbase.net/cloudbase-js-sdk/2.9.1/cloudbase.full.js';
-  script.onload = () => {
-    try {
-      tcbApp = cloudbase.init({ env: TCB_ENV });
-      tcbDb  = tcbApp.database();
-      tcbApp.auth({ persistence: 'local' }).signInAnonymously()
-        .then(() => setLbStatus(true))
-        .catch(err => { console.log('LB_AUTH_ERR', err && (err.message || JSON.stringify(err))); setLbStatus(false); });
-    } catch (e){ console.log('LB_INIT_ERR', e); setLbStatus(false); }
-  };
-  script.onerror = e => { console.log('LB_SDK_ERR', e); setLbStatus(false); };
-  document.head.appendChild(script);
+// 启动时探一次接口，通了就亮出排行榜按钮
+async function initLeaderboard(){
+  if (lbDisabled()) return;
+  try {
+    await tcbApi('/scores?select=id&limit=1');
+    setLbStatus(true);
+  } catch (e){
+    console.log('LB_READY_CHECK', e && e.message);
+    setLbStatus(false);
+  }
 }
 
-// 结束页按钮显隐
+// 结束页按钮显隐：只有超过本机最好成绩才让提交（防刷屏）
 function updateOverButtons(){
-  submitBtn.hidden  = !(lbReady && score > 0 && !submitting);
+  submitBtn.hidden  = !(lbReady && score > myBest && !submitting);
   overLbBtn.hidden  = !lbReady;
 }
 
@@ -1006,24 +1010,20 @@ async function submitScore(){
   if (submitting || !lbReady) return;
   submitting = true;
   submitTip.textContent = '上传中…';
-  const nick = (nickInput.value.trim() || '蛇友' + Math.floor(Math.random() * 9000 + 1000)).slice(0, 12);
+  const nick = (nickInput.value.trim() || '蛇友' + Math.floor(Math.random() * 9000 + 1000)).slice(0, 10);
   try {
-    const col = tcbDb.collection('scores');
-    // 找我自己之前的记录（同一设备身份固定）
-    const mine = await col.where({ _openid: '{openid}' }).limit(1).get();
-    if (mine.data.length > 0 && mine.data[0].score >= score){
-      submitTip.textContent = '上次的分数更高，不用更新啦～';
-      submitting = false;
-      return;
-    }
-    const payload = { nick, avatar: selAvatar, score, time: Date.now() };
-    if (mine.data.length > 0){
-      await col.doc(mine.data[0]._id).update(payload); // 更新自己的记录
-    } else {
-      await col.add(payload);                          // 新建记录
-    }
+    // 头像 emoji 拼在昵称前面一起存，排行榜里拆开显示
+    const fullName = selAvatar + nick;
+    await tcbApi('/scores', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ name: fullName, score, created_at: new Date().toISOString() }),
+    });
+    myBest = Math.max(myBest, score);
+    localStorage.setItem('snake.myscore.v1', myBest);
     localStorage.setItem('snake.nick.v1', nick);
     localStorage.setItem('snake.avatar.v1', selAvatar);
+    localStorage.setItem('snake.myname.v1', fullName);
     submitTip.textContent = '上榜成功！去排行榜看看吧 🎉';
     updateOverButtons();
     setTimeout(closeSubmit, 1200);
@@ -1041,33 +1041,32 @@ async function openLb(){
   myRank.textContent = '';
   lbModal.hidden = false;
   try {
-    const col = tcbDb.collection('scores');
-    const _ = tcbDb.command;
-    const [top, mine] = await Promise.all([
-      col.orderBy('score', 'desc').limit(20).get(),
-      col.where({ _openid: '{openid}' }).orderBy('score', 'desc').limit(1).get(),
-    ]);
-    if (top.data.length === 0){
+    const myName = localStorage.getItem('snake.myname.v1') || '';
+    const jobs = [tcbApi('/scores?select=name,score&order=score.desc&limit=20')];
+    if (myBest > 0) jobs.push(tcbApi('/scores?score=gt.' + myBest + '&select=id&limit=1', { headers: { Prefer: 'count=exact' } }));
+    const results = await Promise.all(jobs);
+    const top = await results[0].json();
+    if (!Array.isArray(top) || top.length === 0){
       list.innerHTML = '<div class="lb-empty">还没有人上榜，快去拿第一！</div>';
     } else {
       list.innerHTML = '';
-      top.data.forEach((d, i) => {
+      top.forEach((d, i) => {
         const row = document.createElement('div');
         row.className = 'lb-row' + (i < 3 ? ' top' + (i + 1) : '');
-        const isMe = mine.data.length > 0 && d._id === mine.data[0]._id;
+        const isMe = myName && d.name === myName && d.score === myBest;
         if (isMe) row.classList.add('me');
         row.innerHTML = '<span class="lb-rank">' + (i + 1) + '</span>'
-          + '<span class="lb-avatar">' + (d.avatar || '🐍') + '</span>'
+          + '<span class="lb-avatar">' + (d.name ? d.name.slice(0, 2) : '🐍') + '</span>'
           + '<span class="lb-nick"></span>'
           + '<span class="lb-score">' + d.score + ' 分</span>';
-        row.querySelector('.lb-nick').textContent = d.nick || '无名蛇友';
+        row.querySelector('.lb-nick').textContent = (d.name ? d.name.slice(2) : '') || '无名蛇友';
         list.appendChild(row);
       });
     }
-    if (mine.data.length > 0){
-      const myBest = mine.data[0].score;
-      const better = await col.where({ score: _.gt(myBest) }).count();
-      myRank.textContent = '我的最佳：' + myBest + ' 分 · 第 ' + (better.total + 1) + ' 名';
+    if (myBest > 0 && results.length > 1){
+      const range = results[1].headers.get('content-range') || '';
+      const total = Number(range.split('/')[1]) || 0;
+      myRank.textContent = '我的最佳：' + myBest + ' 分 · 第 ' + (total + 1) + ' 名';
     } else {
       myRank.textContent = '我还没上榜，吃几颗豆再来！';
     }
