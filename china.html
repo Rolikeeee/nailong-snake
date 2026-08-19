@@ -960,9 +960,9 @@ function initLeaderboard(){
     try {
       tcbApp = cloudbase.init({ env: TCB_ENV });
       tcbDb  = tcbApp.database();
-      tcbApp.auth({ persistence: 'local' }).anonymousAuthProvider().signIn()
+      tcbApp.auth({ persistence: 'local' }).signInAnonymously()
         .then(() => setLbStatus(true))
-        .catch(err => { console.log('LB_AUTH_ERR', err); setLbStatus(false); });
+        .catch(err => { console.log('LB_AUTH_ERR', err && (err.message || JSON.stringify(err))); setLbStatus(false); });
     } catch (e){ console.log('LB_INIT_ERR', e); setLbStatus(false); }
   };
   script.onerror = e => { console.log('LB_SDK_ERR', e); setLbStatus(false); };
