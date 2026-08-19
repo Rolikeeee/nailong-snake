@@ -962,10 +962,10 @@ function initLeaderboard(){
       tcbDb  = tcbApp.database();
       tcbApp.auth({ persistence: 'local' }).anonymousAuthProvider().signIn()
         .then(() => setLbStatus(true))
-        .catch(() => setLbStatus(false));
-    } catch (e){ setLbStatus(false); }
+        .catch(err => { console.log('LB_AUTH_ERR', err); setLbStatus(false); });
+    } catch (e){ console.log('LB_INIT_ERR', e); setLbStatus(false); }
   };
-  script.onerror = () => setLbStatus(false);
+  script.onerror = e => { console.log('LB_SDK_ERR', e); setLbStatus(false); };
   document.head.appendChild(script);
 }
 
