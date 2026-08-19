@@ -222,6 +222,71 @@
     .sticker{ display:none; }
   }
 
+  /* ============ 结束页按钮组 ============ */
+  .over-actions{ display:flex; gap:12px; flex-wrap:wrap; justify-content:center; padding:0 18px; }
+  .restart.ghost{ background:var(--white); color:var(--ink); }
+
+  /* ============ 排行榜 / 提交分数弹窗 ============ */
+  .modal{
+    position:fixed; inset:0; z-index:60;
+    display:flex; align-items:center; justify-content:center;
+    background:rgba(43,43,51,.45);
+    padding:16px;
+  }
+  .modal[hidden]{ display:none; }
+  .modal-card{
+    width:min(94vw,440px); max-height:88vh; overflow:auto;
+    background:var(--cream); border:3px solid var(--ink); border-radius:20px;
+    box-shadow:8px 8px 0 var(--ink);
+    padding:20px 18px;
+    transform:rotate(-1deg);
+    animation:popIn .25s cubic-bezier(.34,1.56,.64,1) both;
+  }
+  .modal-title{ margin:0 0 14px; font-size:22px; font-weight:700; text-align:center; }
+  .avatar-row{ display:flex; flex-wrap:wrap; gap:8px; justify-content:center; margin-bottom:14px; }
+  .avatar-opt{
+    width:46px; height:46px; font-size:24px;
+    display:flex; align-items:center; justify-content:center;
+    background:var(--white); border:3px solid transparent; border-radius:50%;
+    cursor:pointer; -webkit-tap-highlight-color:transparent;
+  }
+  .avatar-opt.sel{ border-color:var(--ink); background:var(--yellow); transform:scale(1.1); }
+  .nick-input{
+    width:100%; padding:10px 14px; margin-bottom:14px;
+    font-size:16px; font-family:inherit; color:var(--ink);
+    border:3px solid var(--ink); border-radius:12px; background:var(--white);
+  }
+  .nick-input:focus-visible{ outline:3px dashed var(--purple); outline-offset:2px; }
+  .modal-btns{ display:flex; gap:12px; justify-content:center; }
+  .m-btn{
+    padding:10px 26px;
+    border:3px solid var(--ink); border-radius:999px;
+    font-family:inherit; font-weight:700; font-size:16px;
+    background:var(--white); color:var(--ink);
+    box-shadow:3px 3px 0 var(--ink);
+    cursor:pointer; -webkit-tap-highlight-color:transparent;
+  }
+  .m-btn.primary{ background:var(--pink); color:#fff; }
+  .m-btn:active{ transform:translate(2px,2px); box-shadow:1px 1px 0 var(--ink); }
+  .m-tip{ margin:12px 0 0; font-size:13px; color:var(--ink-soft); text-align:center; min-height:18px; }
+  .lb-list{ display:flex; flex-direction:column; gap:8px; margin-bottom:14px; }
+  .lb-row{
+    display:flex; align-items:center; gap:10px;
+    padding:7px 12px;
+    background:var(--white); border:3px solid var(--ink); border-radius:12px;
+    box-shadow:2px 2px 0 var(--ink);
+  }
+  .lb-row.top1{ background:var(--yellow); }
+  .lb-row.top2{ background:#E8E4F5; }
+  .lb-row.top3{ background:#FFE3C9; }
+  .lb-row.me{ background:#CFF5E9; }
+  .lb-rank{ width:36px; font-weight:700; font-size:16px; text-align:center; }
+  .lb-avatar{ font-size:22px; }
+  .lb-nick{ flex:1; font-weight:700; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+  .lb-score{ font-weight:700; color:var(--purple); }
+  .lb-empty{ text-align:center; color:var(--ink-soft); padding:14px 0; }
+  .m-rank{ margin:0 0 14px; text-align:center; font-size:15px; font-weight:700; }
+
   @media (prefers-reduced-motion:reduce){
     .overlay{ animation:none; }
     .tile, .sticker{ animation:none; }
@@ -247,6 +312,7 @@
       <div class="score-box"><span class="label">吃掉</span><span class="num" id="score">0</span></div>
       <div class="score-box"><span class="label">最高纪录</span><span class="num" id="best">0</span></div>
       <button class="sound-btn" id="soundBtn" aria-pressed="true">声音 开</button>
+      <button class="sound-btn" id="lbBtn" hidden>🏆 排行榜</button>
     </div>
   </aside>
 
@@ -256,7 +322,11 @@
         <canvas id="board" aria-label="奶龙贪吃蛇游戏棋盘"></canvas>
         <div class="overlay" id="overlay">
           <div class="over-card"><p class="over-msg" id="overMsg">按空格开吃！</p></div>
-          <button class="restart" id="restartBtn" hidden>再来一局</button>
+          <div class="over-actions">
+            <button class="restart" id="restartBtn" hidden>再来一局</button>
+            <button class="restart ghost" id="submitBtn" hidden>🏆 提交分数</button>
+            <button class="restart ghost" id="overLbBtn" hidden>排行榜</button>
+          </div>
         </div>
       </div>
     </div>
@@ -267,6 +337,30 @@
   <p class="rotate-hint">📱 旋转手机，横屏更好玩</p>
 
   <p class="foot">游戏和背景音乐《奶龙贪吃蛇.m4a》放同一文件夹即可</p>
+
+  <!-- 提交分数弹窗 -->
+  <div class="modal" id="submitModal" hidden>
+    <div class="modal-card">
+      <h2 class="modal-title">🏆 提交你的战绩</h2>
+      <div class="avatar-row" id="avatarRow"></div>
+      <input class="nick-input" id="nickInput" maxlength="12" placeholder="起个响亮的名号…">
+      <div class="modal-btns">
+        <button class="m-btn" id="submitCancel">算了</button>
+        <button class="m-btn primary" id="submitOk">冲上榜！</button>
+      </div>
+      <p class="m-tip" id="submitTip"></p>
+    </div>
+  </div>
+
+  <!-- 排行榜弹窗 -->
+  <div class="modal" id="lbModal" hidden>
+    <div class="modal-card">
+      <h2 class="modal-title">🏆 蛇王排行榜</h2>
+      <div class="lb-list" id="lbList"></div>
+      <p class="m-rank" id="myRank"></p>
+      <button class="m-btn primary" id="lbClose">开玩！</button>
+    </div>
+  </div>
 </main>
 
 <script>
@@ -414,6 +508,7 @@ function gameOver(){
   const line = OVER_LINES[Math.floor(Math.random() * OVER_LINES.length)];
   overMsg.textContent = `吃到 ${score} 颗豆子！${isRecord ? '\n🏆 新纪录，有点东西！' : ''}\n${line}`;
   setState('over');
+  updateOverButtons();
   if (isRecord){ sndRecord(); } else { sndOver(); }
 }
 
@@ -830,8 +925,171 @@ function sndRecord(){ // 破纪录：播放剪映素材音效
   recordSnd.play().catch(() => {});
 }
 
+// ----- 8. 排行榜（腾讯云开发 CloudBase，未配置环境时自动隐藏） -----
+const TCB_ENV = "nailong-snake-d4g1dibjn844972c5"; // 云开发环境 ID
+const LB_AVATARS = ['🐍','🐉','🍭','🎃','👻','🤡','🐸','🦊','🐼','🐯','🍅','🥑'];
+let lbReady = false;    // SDK 加载 + 匿名登录是否就绪
+let tcbApp = null, tcbDb = null;
+let selAvatar = LB_AVATARS[0];
+let submitting = false;
+
+const submitModal = document.getElementById('submitModal');
+const lbModal     = document.getElementById('lbModal');
+const submitBtn   = document.getElementById('submitBtn');
+const overLbBtn   = document.getElementById('overLbBtn');
+const lbBtn       = document.getElementById('lbBtn');
+const nickInput   = document.getElementById('nickInput');
+const submitTip   = document.getElementById('submitTip');
+
+function lbDisabled(){ return !TCB_ENV || TCB_ENV.startsWith('__'); }
+
+function setLbStatus(ok){
+  lbReady = ok;
+  lbBtn.hidden = !ok;      // 记分栏的排行榜按钮
+  if (!ok) return;
+  const nick = localStorage.getItem('snake.nick.v1');
+  if (nick) nickInput.value = nick;
+  selAvatar = localStorage.getItem('snake.avatar.v1') || LB_AVATARS[0];
+}
+
+function initLeaderboard(){
+  if (lbDisabled()) return; // 没配环境 ID：静默隐藏，不影响游戏
+  const script = document.createElement('script');
+  script.src = 'https://static.cloudbase.net/cloudbase-js-sdk/2.9.1/cloudbase.full.js';
+  script.onload = () => {
+    try {
+      tcbApp = cloudbase.init({ env: TCB_ENV });
+      tcbDb  = tcbApp.database();
+      tcbApp.auth({ persistence: 'local' }).anonymousAuthProvider().signIn()
+        .then(() => setLbStatus(true))
+        .catch(() => setLbStatus(false));
+    } catch (e){ setLbStatus(false); }
+  };
+  script.onerror = () => setLbStatus(false);
+  document.head.appendChild(script);
+}
+
+// 结束页按钮显隐
+function updateOverButtons(){
+  submitBtn.hidden  = !(lbReady && score > 0 && !submitting);
+  overLbBtn.hidden  = !lbReady;
+}
+
+// 头像选择器
+function buildAvatars(){
+  const row = document.getElementById('avatarRow');
+  row.innerHTML = '';
+  LB_AVATARS.forEach(a => {
+    const el = document.createElement('button');
+    el.type = 'button';
+    el.className = 'avatar-opt' + (a === selAvatar ? ' sel' : '');
+    el.textContent = a;
+    el.setAttribute('aria-label', '头像 ' + a);
+    el.addEventListener('click', () => {
+      selAvatar = a;
+      row.querySelectorAll('.avatar-opt').forEach(x => x.classList.remove('sel'));
+      el.classList.add('sel');
+    });
+    row.appendChild(el);
+  });
+}
+
+function openSubmit(){
+  if (!lbReady) return;
+  buildAvatars();
+  submitTip.textContent = '';
+  submitModal.hidden = false;
+}
+function closeSubmit(){ submitModal.hidden = true; }
+
+async function submitScore(){
+  if (submitting || !lbReady) return;
+  submitting = true;
+  submitTip.textContent = '上传中…';
+  const nick = (nickInput.value.trim() || '蛇友' + Math.floor(Math.random() * 9000 + 1000)).slice(0, 12);
+  try {
+    const col = tcbDb.collection('scores');
+    // 找我自己之前的记录（同一设备身份固定）
+    const mine = await col.where({ _openid: '{openid}' }).limit(1).get();
+    if (mine.data.length > 0 && mine.data[0].score >= score){
+      submitTip.textContent = '上次的分数更高，不用更新啦～';
+      submitting = false;
+      return;
+    }
+    const payload = { nick, avatar: selAvatar, score, time: Date.now() };
+    if (mine.data.length > 0){
+      await col.doc(mine.data[0]._id).update(payload); // 更新自己的记录
+    } else {
+      await col.add(payload);                          // 新建记录
+    }
+    localStorage.setItem('snake.nick.v1', nick);
+    localStorage.setItem('snake.avatar.v1', selAvatar);
+    submitTip.textContent = '上榜成功！去排行榜看看吧 🎉';
+    updateOverButtons();
+    setTimeout(closeSubmit, 1200);
+  } catch (err){
+    submitTip.textContent = '上传失败，网络开小差了，再试一次？';
+  }
+  submitting = false;
+}
+
+async function openLb(){
+  if (!lbReady) return;
+  const list = document.getElementById('lbList');
+  const myRank = document.getElementById('myRank');
+  list.innerHTML = '<div class="lb-empty">加载中…</div>';
+  myRank.textContent = '';
+  lbModal.hidden = false;
+  try {
+    const col = tcbDb.collection('scores');
+    const _ = tcbDb.command;
+    const [top, mine] = await Promise.all([
+      col.orderBy('score', 'desc').limit(20).get(),
+      col.where({ _openid: '{openid}' }).orderBy('score', 'desc').limit(1).get(),
+    ]);
+    if (top.data.length === 0){
+      list.innerHTML = '<div class="lb-empty">还没有人上榜，快去拿第一！</div>';
+    } else {
+      list.innerHTML = '';
+      top.data.forEach((d, i) => {
+        const row = document.createElement('div');
+        row.className = 'lb-row' + (i < 3 ? ' top' + (i + 1) : '');
+        const isMe = mine.data.length > 0 && d._id === mine.data[0]._id;
+        if (isMe) row.classList.add('me');
+        row.innerHTML = '<span class="lb-rank">' + (i + 1) + '</span>'
+          + '<span class="lb-avatar">' + (d.avatar || '🐍') + '</span>'
+          + '<span class="lb-nick"></span>'
+          + '<span class="lb-score">' + d.score + ' 分</span>';
+        row.querySelector('.lb-nick').textContent = d.nick || '无名蛇友';
+        list.appendChild(row);
+      });
+    }
+    if (mine.data.length > 0){
+      const myBest = mine.data[0].score;
+      const better = await col.where({ score: _.gt(myBest) }).count();
+      myRank.textContent = '我的最佳：' + myBest + ' 分 · 第 ' + (better.total + 1) + ' 名';
+    } else {
+      myRank.textContent = '我还没上榜，吃几颗豆再来！';
+    }
+  } catch (err){
+    list.innerHTML = '<div class="lb-empty">排行榜加载失败，稍后再试～</div>';
+  }
+}
+
+// 按钮与弹窗事件
+submitBtn.addEventListener('click', openSubmit);
+overLbBtn.addEventListener('click', openLb);
+lbBtn.addEventListener('click', openLb);
+document.getElementById('submitCancel').addEventListener('click', closeSubmit);
+document.getElementById('submitOk').addEventListener('click', submitScore);
+document.getElementById('lbClose').addEventListener('click', () => { lbModal.hidden = true; });
+[submitModal, lbModal].forEach(m => {
+  m.addEventListener('click', e => { if (e.target === m) m.hidden = true; });
+});
+
 // ----- 启动：照片解码完成后，显示“点击开始” -----
 boot();
+initLeaderboard();
 </script>
 </body>
 </html>
