@@ -9,7 +9,7 @@
   奶龙贪吃蛇 · 搞怪版 —— 单文件小游戏（背景音乐为外部文件，需放在同文件夹）
   设计概念：糖果色 + 漫画黑描边 + 跳跳糖标题 + 搞怪贴纸
   蛇头与豆子用 D 盘微信照片（已嵌入本文件）
-  背景音乐：《奶龙贪吃蛇》从腾讯 COS 广州节点加载（国内加速版，循环播放）
+  背景音乐：《奶龙贪吃蛇》bgm-small.m4a（小体积版，循环播放）
   想学代码的话，按下面顺序读：
     1) HTML 结构（body 里有什么）
     2) CSS 样式（<style> 里的配色与布局）
@@ -431,7 +431,7 @@ function boot(){
 function shortestAngle(d){ return Math.atan2(Math.sin(d), Math.cos(d)); }
 
 // ----- 2.5 背景音乐：奶龙贪吃蛇（和本文件放同一文件夹） -----
-const bgm = new Audio('https://nailong-snake-1470457347.cos.ap-guangzhou.myqcloud.com/%E5%A5%B6%E9%BE%99%E8%B4%AA%E5%90%83%E8%9B%87.m4a');
+const bgm = new Audio('bgm-small.m4a');
 bgm.loop = true;          // 循环播放
 bgm.volume = 0.35;        // 音乐音量，别盖过音效
 bgm.preload = 'auto';
