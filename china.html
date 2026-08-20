@@ -919,9 +919,13 @@ function sndOver(){ // 游戏结束：滑梯下滑“呜～”
   slide(460, 110, 0.50, 'sawtooth', 0.06);
   slide(240, 60,  0.55, 'triangle', 0.07, 0.05);
 }
-function sndRecord(){ // 破纪录：播放剪映素材音效
+function sndRecord(){ // 破纪录：先停背景音乐，只放破纪录音效，放完再恢复
   if (muted) return;
+  bgm.pause();                      // 暂停背景音乐，让破纪录音效单独响
   recordSnd.currentTime = 0;
+  recordSnd.onended = () => {       // 破纪录音效放完后，立马恢复背景音乐
+    if (!muted) bgm.play().catch(() => {});
+  };
   recordSnd.play().catch(() => {});
 }
 
