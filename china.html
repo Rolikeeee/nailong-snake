@@ -459,6 +459,7 @@ const bestEl     = document.getElementById('best');
 // 最高分存进 localStorage，关掉页面也不会丢
 let best = Number(localStorage.getItem('snake.best.v1')) || 0;
 bestEl.textContent = best;
+let lastScore = Number(localStorage.getItem('snake.lastscore.v1')) || 0; // 上一局分数，破纪录判断用
 
 // ----- 3. 开始 / 暂停 / 结束的流程控制 -----
 function resetAndStart(){
@@ -499,8 +500,10 @@ const OVER_LINES = [
 ];
 
 function gameOver(){
-  const isRecord = score > best;
-  if (isRecord){
+  const isRecord = score > lastScore;    // 只要比上一局高就算破纪录
+  lastScore = score;
+  localStorage.setItem('snake.lastscore.v1', lastScore);
+  if (score > best){                     // 历史最高分仍单独更新显示
     best = score;
     localStorage.setItem('snake.best.v1', best);
     bestEl.textContent = best;
